@@ -29,10 +29,12 @@ public class Connection extends Thread{
     private boolean connected = false;
     private ServerSocket serverSocket;
     private Socket socket;
+    private JTextArea messageArea;
 
-    public Connection(ChatProgramApplet chatApplet, JTextArea serverMessagesArea) {
+    public Connection(ChatProgramApplet chatApplet, JTextArea serverMessagesArea, JTextArea messageArea) {
         this.chatApplet = chatApplet;
         this.serverMessagesArea = serverMessagesArea;
+        this.messageArea = messageArea;
     }
 
 
@@ -43,8 +45,9 @@ public class Connection extends Thread{
                 serverMessagesArea.setText("Error: No free port.");
                 return;
             }
+            String handle = this.chatApplet.getHandle();
             String portString = "" + port;
-            sendHttpRequest("cmd","Connect","port",portString);
+            sendHttpRequest("cmd","Connect","port",portString,"handle",handle);
             socket = serverSocket.accept();
             networkInput = new Scanner(socket.getInputStream());
             serverSocket.close();
@@ -53,6 +56,13 @@ public class Connection extends Thread{
         } catch (IOException ex) {
             serverMessagesArea.setText("Error in connectToServer\n");
             serverMessagesArea.append(ex.toString());
+        }
+    }
+    
+    public void sendToServer() {
+        if(socket != null) {
+            String message = messageArea.getText();
+            sendHttpRequest("cmd","Send","message",message);
         }
     }
 

@@ -5,6 +5,11 @@
  */
 package chatprogramapplet;
 
+import java.awt.event.ActionEvent;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JTextArea;
+
 /**
  *
  * @author James
@@ -30,7 +35,7 @@ public class ChatProgramApplet extends javax.swing.JApplet{
 
 
     private void launchconnection() {
-        connection = new Connection(this, serverMessagesArea);
+        connection = new Connection(this, serverMessagesArea, messageArea);
         connection.start();
     }
 
@@ -42,12 +47,31 @@ public class ChatProgramApplet extends javax.swing.JApplet{
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
+        
+        JFrame frame = new JFrame();
+        handle = JOptionPane.showInputDialog(frame,
+                                                    "Enter Your Nickname: ",
+                                                    "Name Entry",
+                                                    JOptionPane.PLAIN_MESSAGE);
 
         connectButton = new javax.swing.JButton();
         serverMessagesFieldLabel = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         serverMessagesArea = new javax.swing.JTextArea();
+        messageArea = new JTextArea(5, 50);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setLineWrap(true);
         disconnectButton = new javax.swing.JButton();
+        sendButton = new javax.swing.JButton();
+        
+        sendButton.setText("Send");
+        sendButton.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sendButtonActionPerformed(e);
+            }
+        });
 
         connectButton.setText("Connect");
         connectButton.addActionListener(new java.awt.event.ActionListener() {
@@ -79,10 +103,13 @@ public class ChatProgramApplet extends javax.swing.JApplet{
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 324, Short.MAX_VALUE)
                     .addComponent(serverMessagesFieldLabel)
+                    .addComponent(messageArea)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(connectButton, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 101, Short.MAX_VALUE)
-                        .addComponent(disconnectButton)))
+                        .addComponent(disconnectButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 101, Short.MAX_VALUE)
+                        .addComponent(sendButton)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -92,10 +119,13 @@ public class ChatProgramApplet extends javax.swing.JApplet{
                 .addComponent(serverMessagesFieldLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(messageArea)
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(disconnectButton)
-                    .addComponent(connectButton))
+                    .addComponent(connectButton)
+                    .addComponent(sendButton))
                 .addGap(211, 211, 211))
         );
     }// </editor-fold>                        
@@ -110,19 +140,32 @@ public class ChatProgramApplet extends javax.swing.JApplet{
         if (connection.isConnected()) {
             connection.disconnectFromServer();
         }
-}                                                
+}
+    
+    private void sendButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        if(connection.isConnected()){
+            connection.sendToServer();
+        }
+    }
 
     public void stop() {
         disconnectButtonActionPerformed(null);
+    }
+    
+    public String getHandle() {
+        return this.handle;
     }
 
 
     // Variables declaration - do not modify                     
     private javax.swing.JButton connectButton;
     private javax.swing.JButton disconnectButton;
+    private javax.swing.JButton sendButton;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextArea serverMessagesArea;
+    private javax.swing.JTextArea messageArea;
     private javax.swing.JLabel serverMessagesFieldLabel;
+    private String handle;
     // End of variables declaration                   
     
 }

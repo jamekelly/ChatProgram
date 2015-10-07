@@ -1,7 +1,10 @@
+package controller;
+
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -32,9 +35,11 @@ public class Broadcaster extends Thread{
                 Thread.sleep(DELAY);
             } catch (InterruptedException ex) {
             }
-            for(String message : allMessages) {
+            Iterator<String> iter = allMessages.iterator();
+            while(iter.hasNext()){
+                String message = iter.next();
                 push(message);
-                allMessages.remove(message);
+                iter.remove();
             }
         }
     }

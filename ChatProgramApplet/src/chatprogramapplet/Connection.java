@@ -52,7 +52,7 @@ public class Connection extends Thread{
             networkInput = new Scanner(socket.getInputStream());
             serverSocket.close();
             setConnected(true);
-            serverMessagesArea.append("connected = true\n");
+            serverMessagesArea.append("connected = true\n handle = " + handle);
         } catch (IOException ex) {
             serverMessagesArea.setText("Error in connectToServer\n");
             serverMessagesArea.append(ex.toString());
@@ -92,10 +92,12 @@ public class Connection extends Thread{
     public void sendHttpRequest(String... requestData) {
         try {
             URL sourceURL = chatApplet.getDocumentBase();
+            System.out.println(sourceURL);
             String host = sourceURL.getHost();
+            System.out.println("host: " + host);
             String webAppName = "/ChatProgramWeb";
             String servletName = "/Controller";
-            String address = "http://" + host + ":8080" + webAppName + servletName;
+            String address = "http://" + "localhost" + ":8080" + webAppName + servletName;
             QueryString query = buildQuery(requestData);
             URL url = new URL(address + "?" + query);
             URLConnection urlConnection = url.openConnection();

@@ -1,15 +1,19 @@
+package controller;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
 
+import controller.Broadcaster;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -87,6 +91,7 @@ public class ChatServlet extends HttpServlet {
     
     private String sendMessage(HttpServletRequest request) {
         HttpSession session = request.getSession();
+        System.out.println(session.getAttribute("socket"));
         if(session.getAttribute("handle") == null){
             return "Error, no handle";
         } else {
@@ -112,10 +117,12 @@ public class ChatServlet extends HttpServlet {
                 socket = new Socket(address, port);
                 session.setAttribute("socket", socket);
                 session.setAttribute("handle", handle);
+                System.out.println(session.getAttribute("handle"));
                 allSockets.add(socket);
                 OutputStream output = socket.getOutputStream();
                 PrintWriter printWriter = new PrintWriter(output,true);
                 allPrintWriters.add(printWriter);
+                allMessages.add("someone");
             } catch (IOException ex) {
                 ex.printStackTrace();
                 return "Connect request failed.";

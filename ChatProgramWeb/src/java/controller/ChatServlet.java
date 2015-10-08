@@ -116,7 +116,6 @@ public class ChatServlet extends HttpServlet {
                 InetAddress address = InetAddress.getByName(host);
                 socket = new Socket(address, port);
                 session.setAttribute("socket", socket);
-                session.setAttribute("handle", handle);
                 System.out.println(session.getAttribute("handle"));
                 allSockets.add(socket);
                 OutputStream output = socket.getOutputStream();

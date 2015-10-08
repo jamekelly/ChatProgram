@@ -61,7 +61,7 @@ public class Connection extends Thread{
     
     public void sendToServer() {
         if(socket != null) {
-            String message = messageArea.getText();
+            String message = chatApplet.getHandle() + ": " + messageArea.getText();
             sendHttpRequest("cmd","Send","message",message);
         }
     }

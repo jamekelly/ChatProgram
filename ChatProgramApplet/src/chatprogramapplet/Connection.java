@@ -12,10 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JTextArea;
 
 /**
@@ -62,11 +59,9 @@ public class Connection extends Thread{
             setConnected(true);
             serverMessagesArea.setText("");
             responseArea.append("connected\n");
-            //MessageReceiver receiver = new MessageReceiver(chatApplet,serverMessagesArea,clientID);
-            //receiver.start();
         } catch (IOException ex) {
-            serverMessagesArea.setText("Error in connectToServer\n");
-            serverMessagesArea.append(ex.toString());
+            responseArea.setText("Error in connectToServer\n");
+            responseArea.append(ex.toString());
         }
     }
     
@@ -80,11 +75,7 @@ public class Connection extends Thread{
     
     public String receiveMessages() {
         String response = sendHttpRequest("cmd","Receive","clientID",clientID);
-        if(response.trim().length() < 1) {
-            return "";
-        } else {
-            return response;
-        }
+        return response;
     }
 
     private int makeServerSocket() {
@@ -100,9 +91,7 @@ public class Connection extends Thread{
     }
     
     public void disconnectFromServer() {
-        responseArea.append("Setting Connection to false \n");
         setConnected(false);
-        responseArea.append("Set Connection to false \n");
         sendHttpRequest("cmd","Disconnect","clientID",clientID);
         try {
             socket.close();
@@ -110,19 +99,16 @@ public class Connection extends Thread{
             ex.printStackTrace();
         }    
         socket = null;
-        //this.stopRunning();
     }
 
     public String sendHttpRequest(String... requestData) {
         String confirmation;
         try {
             URL sourceURL = chatApplet.getDocumentBase();
-            //System.out.println(sourceURL);
-            //String host = sourceURL.getHost();
-            //System.out.println("host: " + host);
+            String host = sourceURL.getHost();
             String webAppName = "/ChatProgramWeb";
-            String servletName = "/Controller";
-            String address = "http://" + "localhost" + ":8080" + webAppName + servletName;
+            String servletName = "/ChatServlet";
+            String address = "http://" + host + ":8080" + webAppName + servletName;
             QueryString query = buildQuery(requestData);
             URL url = new URL(address + "?" + query);
             URLConnection urlConnection = url.openConnection();
@@ -137,9 +123,8 @@ public class Connection extends Thread{
     }
     
     private void saveClientID(String response) {
-        int start = 0;
         int end = response.indexOf("#");
-        clientID = response.substring(start,end);        
+        clientID = response.substring(0,end);        
     }
 
     private QueryString buildQuery(String[] requestData) {
@@ -185,7 +170,6 @@ public class Connection extends Thread{
             if (isConnected()) {
                 String response = this.receiveMessages();
                 if(response.trim().length() > 0){
-                    System.out.println("CLIENT APPENDED RESPONSE: " + response);
                     serverMessagesArea.append(response.trim() + "\n");
                 }
             }
@@ -206,10 +190,6 @@ public class Connection extends Thread{
 
     public synchronized void stopRunning() {
         this.running = false;
-    }
-
-    public void setRunning(boolean running) {
-        this.running = running;
     }
     
     

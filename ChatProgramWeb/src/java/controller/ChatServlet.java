@@ -6,14 +6,12 @@ package controller;
  * and open the template in the editor.
  */
 
-import controller.Broadcaster;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -30,9 +28,7 @@ import javax.servlet.http.HttpSession;
 public class ChatServlet extends HttpServlet {
 
     
-    public static Broadcaster broadcaster = null;
     public static ArrayList<Socket> allSockets;
-    private static ArrayList<PrintWriter> allPrintWriters;
     private static ArrayList<String> allMessages;
     private static HashMap<Integer,Socket> idSocketMap;
     private static HashMap<Integer,String> idHandleMap;
@@ -41,21 +37,14 @@ public class ChatServlet extends HttpServlet {
 
     public void init() throws ServletException {
         allSockets = new ArrayList<>();
-        allPrintWriters = new ArrayList<>();
         allMessages = new ArrayList<>();
         idSocketMap = new HashMap<>();
         idHandleMap = new HashMap<>();
         idMessageMap = new HashMap<>();
-        //System.out.println("Launching data pusher thread.");
-        //broadcaster = new Broadcaster(allPrintWriters,allMessages);
-        //broadcaster.start();
-        //System.out.println("DataPusher started.");
     }
 
     public void destroy() {
         try {
-            System.out.println("Stopping data pusher.");
-            broadcaster.stopRunning();
             for (Socket socket:ChatServlet.allSockets) {
                 if (!socket.isClosed()) {
                     System.out.print("Closing a socket....");
@@ -79,7 +68,6 @@ public class ChatServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
         response.setContentType("text/plain;charset=UTF-8");
-        HttpSession session = request.getSession();
         PrintWriter out = response.getWriter();
         try {
             String answer = null;
@@ -105,23 +93,22 @@ public class ChatServlet extends HttpServlet {
     
     private String sendMessage(HttpServletRequest request) {
         
-            String message1 = request.getParameter("message");
-            int idParam = Integer.parseInt(request.getParameter("clientID"));
-            String handle = idHandleMap.get(idParam);
-            String message = handle + ": " + message1;
-            allMessages.add(message);
+        String message1 = request.getParameter("message");
+        int idParam = Integer.parseInt(request.getParameter("clientID"));
+        String handle = idHandleMap.get(idParam);
+        String message = handle + ": " + message1;
+        allMessages.add(message);
         
         return "Message sent";
     }
     
     private String receiveMessages(HttpServletRequest request){
+        
         int idParam = Integer.parseInt(request.getParameter("clientID"));
         int messageIndex = idMessageMap.get(idParam);
         StringBuilder builder = new StringBuilder();
-        System.out.println("MESSAGE INDEX: " + messageIndex);
        
         while(messageIndex < allMessages.size()){
-            System.out.println("Message: " + allMessages.get(messageIndex));
             builder.append(allMessages.get(messageIndex)).append("\n");
             messageIndex++;
         }
@@ -154,8 +141,6 @@ public class ChatServlet extends HttpServlet {
                 idHandleMap.put(clientID, handle);
                 idMessageMap.put(clientID, 0);
                 OutputStream output = socket.getOutputStream();
-                PrintWriter printWriter = new PrintWriter(output,true);
-                allPrintWriters.add(printWriter);
                 allMessages.add(handle + " has entered the chat");
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -169,7 +154,6 @@ public class ChatServlet extends HttpServlet {
 
     private String breakConnection(HttpServletRequest request) {
         String idParam = request.getParameter("clientID");
-        HttpSession session = request.getSession();
         if (idParam == null) {
             return "Error: Not connected.";
         } else {
@@ -182,9 +166,7 @@ public class ChatServlet extends HttpServlet {
                 ex.printStackTrace();
             }
             int index = allSockets.indexOf(socket);
-            allPrintWriters.remove(index);
             allSockets.remove(index);
-            session.setAttribute("socket", null);
             return "Disconnect request confirmed.";
         }
     }

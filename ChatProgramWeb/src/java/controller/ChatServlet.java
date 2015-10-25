@@ -14,6 +14,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -33,15 +34,22 @@ public class ChatServlet extends HttpServlet {
     public static ArrayList<Socket> allSockets;
     private static ArrayList<PrintWriter> allPrintWriters;
     private static ArrayList<String> allMessages;
+    private static HashMap<Integer,Socket> idSocketMap;
+    private static HashMap<Integer,String> idHandleMap;
+    private static HashMap<Integer, Integer> idMessageMap;
+    private static int clientCount = 0;
 
     public void init() throws ServletException {
         allSockets = new ArrayList<>();
         allPrintWriters = new ArrayList<>();
         allMessages = new ArrayList<>();
-        System.out.println("Launching data pusher thread.");
-        broadcaster = new Broadcaster(allPrintWriters,allMessages);
-        broadcaster.start();
-        System.out.println("DataPusher started.");
+        idSocketMap = new HashMap<>();
+        idHandleMap = new HashMap<>();
+        idMessageMap = new HashMap<>();
+        //System.out.println("Launching data pusher thread.");
+        //broadcaster = new Broadcaster(allPrintWriters,allMessages);
+        //broadcaster.start();
+        //System.out.println("DataPusher started.");
     }
 
     public void destroy() {
@@ -71,71 +79,103 @@ public class ChatServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
         response.setContentType("text/plain;charset=UTF-8");
+        HttpSession session = request.getSession();
         PrintWriter out = response.getWriter();
         try {
             String answer = null;
             String command = request.getParameter("cmd");
             if (command.equals("Connect")) {
                 answer = makeConnection(request);
+                out.println(answer);
             } else if(command.equals("Send")) {
                 answer = sendMessage(request);
+                out.println(answer);
+            } else if(command.equals("Receive")) {
+                answer = receiveMessages(request);
+                out.println(answer);
             } else if (command.equals("Disconnect")) {
                 answer = breakConnection(request);
+                out.println(answer);
             } else answer = "Invalid command.";
-            out.println(answer);
-            System.out.println(answer);
+            System.out.println( "ANSWER: " + answer);
         } finally {
             out.close();
         }
     }
     
     private String sendMessage(HttpServletRequest request) {
-        HttpSession session = request.getSession();
-        System.out.println(session.getAttribute("socket"));
-        if(session.getAttribute("handle") == null){
-            return "Error, no handle";
-        } else {
-            String message = session.getAttribute("handle") +
-                    ": " + request.getParameter("message");
+        
+            String message1 = request.getParameter("message");
+            int idParam = Integer.parseInt(request.getParameter("clientID"));
+            String handle = idHandleMap.get(idParam);
+            String message = handle + ": " + message1;
             allMessages.add(message);
-        }
+        
         return "Message sent";
+    }
+    
+    private String receiveMessages(HttpServletRequest request){
+        int idParam = Integer.parseInt(request.getParameter("clientID"));
+        int messageIndex = idMessageMap.get(idParam);
+        StringBuilder builder = new StringBuilder();
+        System.out.println("MESSAGE INDEX: " + messageIndex);
+       
+        while(messageIndex < allMessages.size()){
+            System.out.println("Message: " + allMessages.get(messageIndex));
+            builder.append(allMessages.get(messageIndex)).append("\n");
+            messageIndex++;
+        }
+        idMessageMap.replace(idParam, messageIndex);
+        return builder.toString();
     }
 
     private String makeConnection(HttpServletRequest request) {
+        String resp;
         HttpSession session = request.getSession();
         if (session.getAttribute("socket")!=null) {
-            return "Error: Already connected.";
+            allMessages.add("not null");
+            resp = "Error: Already connected.";
         } else {
+            // Connect
             String host = request.getRemoteHost();
             int port = Integer.parseInt(request.getParameter("port"));
             System.out.println("Connecting on port: " + port);
             String handle = request.getParameter("handle");
             Socket socket = null;
+            int clientID = clientCount++;
+            
             try {
                 InetAddress address = InetAddress.getByName(host);
                 socket = new Socket(address, port);
+                
                 session.setAttribute("socket", socket);
-                System.out.println(session.getAttribute("handle"));
                 allSockets.add(socket);
+                idSocketMap.put(clientID, socket);
+                idHandleMap.put(clientID, handle);
+                idMessageMap.put(clientID, 0);
                 OutputStream output = socket.getOutputStream();
                 PrintWriter printWriter = new PrintWriter(output,true);
                 allPrintWriters.add(printWriter);
-                allMessages.add("someone");
+                allMessages.add(handle + " has entered the chat");
             } catch (IOException ex) {
                 ex.printStackTrace();
-                return "Connect request failed.";
+                resp = "Connect request failed.";
             }
-            return "Connect request confirmed.";
+            resp = "" + clientID + "#";
         }
+        System.out.println("resp: " + resp);
+        return resp;
     }
 
     private String breakConnection(HttpServletRequest request) {
+        String idParam = request.getParameter("clientID");
         HttpSession session = request.getSession();
-        if (session.getAttribute("socket")==null) {
+        if (idParam == null) {
             return "Error: Not connected.";
         } else {
-            Socket socket = (Socket) session.getAttribute("socket");
+            String handle = idHandleMap.get(Integer.parseInt(idParam));
+            allMessages.add(handle + " has left the chat");
+            Socket socket = idSocketMap.get(Integer.parseInt(idParam));
             try {
                 socket.close();
             } catch (IOException ex) {

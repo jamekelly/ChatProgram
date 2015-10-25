@@ -46,6 +46,7 @@ public class Broadcaster extends Thread{
 
     public void push(String time) {
         for (PrintWriter printWriter:allPrintWriters) {
+            System.out.println("PW");
             System.out.print("Pushing: " + time);
             printWriter.println(time);
             System.out.println("...Pushed.");

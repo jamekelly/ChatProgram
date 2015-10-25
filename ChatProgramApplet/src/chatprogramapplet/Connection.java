@@ -14,6 +14,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JTextArea;
 
 /**
@@ -25,16 +27,20 @@ public class Connection extends Thread{
     private Scanner networkInput;
     private ChatProgramApplet chatApplet;
     private JTextArea serverMessagesArea;
+    private JTextArea responseArea;
     private boolean running = true;
     private boolean connected = false;
     private ServerSocket serverSocket;
     private Socket socket;
     private JTextArea messageArea;
+    private static String clientID;
 
-    public Connection(ChatProgramApplet chatApplet, JTextArea serverMessagesArea, JTextArea messageArea) {
+    public Connection(ChatProgramApplet chatApplet, JTextArea serverMessagesArea, JTextArea messageArea,
+            JTextArea responseArea) {
         this.chatApplet = chatApplet;
         this.serverMessagesArea = serverMessagesArea;
         this.messageArea = messageArea;
+        this.responseArea = responseArea;
     }
 
 
@@ -47,12 +53,17 @@ public class Connection extends Thread{
             }
             String handle = this.chatApplet.getHandle();
             String portString = "" + port;
-            sendHttpRequest("cmd","Connect","port",portString,"handle",handle);
+            String resp = sendHttpRequest("cmd","Connect","port",portString,"handle",handle);
+            System.out.println(resp);
+            saveClientID(resp);
             socket = serverSocket.accept();
             networkInput = new Scanner(socket.getInputStream());
             serverSocket.close();
             setConnected(true);
-            serverMessagesArea.append("connected = true\n handle = " + handle);
+            serverMessagesArea.setText("");
+            responseArea.append("connected\n");
+            //MessageReceiver receiver = new MessageReceiver(chatApplet,serverMessagesArea,clientID);
+            //receiver.start();
         } catch (IOException ex) {
             serverMessagesArea.setText("Error in connectToServer\n");
             serverMessagesArea.append(ex.toString());
@@ -61,8 +72,18 @@ public class Connection extends Thread{
     
     public void sendToServer() {
         if(socket != null) {
-            String message = chatApplet.getHandle() + ": " + messageArea.getText();
-            sendHttpRequest("cmd","Send","message",message);
+            String message = messageArea.getText();
+            messageArea.setText("");
+            sendHttpRequest("cmd","Send","message",message,"clientID",clientID);
+        }
+    }
+    
+    public String receiveMessages() {
+        String response = sendHttpRequest("cmd","Receive","clientID",clientID);
+        if(response.trim().length() < 1) {
+            return "";
+        } else {
+            return response;
         }
     }
 
@@ -79,33 +100,46 @@ public class Connection extends Thread{
     }
     
     public void disconnectFromServer() {
+        responseArea.append("Setting Connection to false \n");
         setConnected(false);
-        sendHttpRequest("cmd","Disconnect");
+        responseArea.append("Set Connection to false \n");
+        sendHttpRequest("cmd","Disconnect","clientID",clientID);
         try {
             socket.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }    
         socket = null;
+        //this.stopRunning();
     }
 
-    public void sendHttpRequest(String... requestData) {
+    public String sendHttpRequest(String... requestData) {
+        String confirmation;
         try {
             URL sourceURL = chatApplet.getDocumentBase();
-            System.out.println(sourceURL);
-            String host = sourceURL.getHost();
-            System.out.println("host: " + host);
+            //System.out.println(sourceURL);
+            //String host = sourceURL.getHost();
+            //System.out.println("host: " + host);
             String webAppName = "/ChatProgramWeb";
             String servletName = "/Controller";
             String address = "http://" + "localhost" + ":8080" + webAppName + servletName;
             QueryString query = buildQuery(requestData);
             URL url = new URL(address + "?" + query);
             URLConnection urlConnection = url.openConnection();
-            String confirmation = getResponse(urlConnection);
-            serverMessagesArea.append(confirmation);
+            confirmation = getResponse(urlConnection);
+            if(!query.getQuery().contains("Receive"))
+                responseArea.append(confirmation);
         } catch (IOException ex) {
             ex.printStackTrace();
+            confirmation = "failed";
         }
+        return confirmation;
+    }
+    
+    private void saveClientID(String response) {
+        int start = 0;
+        int end = response.indexOf("#");
+        clientID = response.substring(start,end);        
     }
 
     private QueryString buildQuery(String[] requestData) {
@@ -145,12 +179,14 @@ public class Connection extends Thread{
     public void run() {
         
         do {
+            try {
+                Thread.sleep(2500);
+            } catch (InterruptedException ex) {}
             if (isConnected()) {
-                try {
-                    String receipt = networkInput.nextLine();
-                    serverMessagesArea.append(receipt + "\n");
-                } catch (NoSuchElementException ex) {
-                    ex.printStackTrace();
+                String response = this.receiveMessages();
+                if(response.trim().length() > 0){
+                    System.out.println("CLIENT APPENDED RESPONSE: " + response);
+                    serverMessagesArea.append(response.trim() + "\n");
                 }
             }
         } while (isRunning());
@@ -171,4 +207,10 @@ public class Connection extends Thread{
     public synchronized void stopRunning() {
         this.running = false;
     }
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+    
+    
 }
